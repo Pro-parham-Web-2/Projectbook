@@ -1,0 +1,71 @@
+name: Download File to Repository
+
+on:
+  workflow_dispatch:
+    inputs:
+      file_url:
+        description: 'لینک مستقیم فایل برای دانلود'
+        required: true
+        type: string
+      file_name:
+        description: 'نام فایل ذخیره شده (مثلاً: book.pdf)'
+        required: true
+        type: string
+      target_folder:
+        description: 'پوشه مقصد (خالی بذارید برای ریشه ریپازتوری)'
+        required: false
+        type: string
+        default: ''
+
+jobs:
+  download-and-upload:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Download file
+        run: |
+          # ایجاد پوشه اگه مشخص شده باشه
+          if [ -n "${{ github.event.inputs.target_folder }}" ]; then
+            mkdir -p "${{ github.event.inputs.target_folder }}"
+            FILE_PATH="${{ github.event.inputs.target_folder }}/${{ github.event.inputs.file_name }}"
+          else
+            FILE_PATH="${{ github.event.inputs.file_name }}"
+          fi
+          
+          echo "📥 در حال دانلود فایل..."
+          echo "🔗 لینک: ${{ github.event.inputs.file_url }}"
+          echo "📁 مسیر: $FILE_PATH"
+          
+          # دانلود فایل
+          curl -L -o "$FILE_PATH" "${{ github.event.inputs.file_url }}"
+          
+          # بررسی حجم فایل
+          FILE_SIZE=$(stat -c%s "$FILE_PATH" 2>/dev/null || stat -f%z "$FILE_PATH")
+          echo "✅ فایل دانلود شد! حجم: $FILE_SIZE بایت"
+          
+          if [ "$FILE_SIZE" -eq 0 ]; then
+            echo "❌ خطا: فایل خالیه! لینک رو بررسی کنید."
+            exit 1
+          fi
+      
+      - name: Upload to repository
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          if [ -n "${{ github.event.inputs.target_folder }}" ]; then
+            FILE_PATH="${{ github.event.inputs.target_folder }}/${{ github.event.inputs.file_name }}"
+          else
+            FILE_PATH="${{ github.event.inputs.file_name }}"
+          fi
+          
+          git add "$FILE_PATH"
+          git commit -m "📦 Add: ${{ github.event.inputs.file_name }}"
+          git push
+          
+          echo "🎉 فایل با موفقیت آپلود شد!"
+          echo "📁 فایل: $FILE_PATH"
+          
