@@ -17,9 +17,6 @@ on:
         type: string
         default: ''
 
-permissions:
-  contents: write
-
 jobs:
   download-and-upload:
     runs-on: ubuntu-latest
@@ -27,8 +24,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
-        with:
-          token: ${{ secrets.GH_TOKEN }}
       
       - name: Download file
         run: |
@@ -67,15 +62,9 @@ jobs:
             FILE_PATH="${{ github.event.inputs.file_name }}"
           fi
           
-          # بررسی اگه فایل قبلاً وجود داره
-          if git show HEAD:"$FILE_PATH" > /dev/null 2>&1; then
-            echo "⚠️ فایل قبلی وجود داره. حذف میشه..."
-            git rm -f "$FILE_PATH"
-          fi
-          
           git add "$FILE_PATH"
           git commit -m "📦 Add: ${{ github.event.inputs.file_name }}"
-          git push https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/${{ github.repository }}.git HEAD:main
+          git push
           
           echo "🎉 فایل با موفقیت آپلود شد!"
           echo "📁 فایل: $FILE_PATH"
